@@ -7,7 +7,11 @@
     "restore": "node src/index.js restoreIndexers",
     "delete": "node src/index.js deleteMovie",
     "pruge": "node src/index.js deleteMovie",
-    "remove": "node src/index.js deleteMovie"
+    "remove": "node src/index.js deleteMovie",
+    "deleteRars": "node src/index.js deleteRars",
+    "removeRars": "node src/index.js deleteRars",
+    "purgeRars": "node src/index.js deleteRars",
+    "sonarr": "node src/sonarr.js"
   },
   "dependencies": {
     "lowdb": "^1.0.0",

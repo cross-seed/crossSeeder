@@ -1,62 +1,181 @@
-const rp = require('request-promise');
+const rp = require("request-promise");
+const querystring = require("querystring");
 
-const { postData } = require('./fetch');
-const config = require('../config');
+const { postData, getData } = require("./fetch");
+const { logger } = require("./tools");
+const config = require("../config");
 
+function getCookie(headers) {
+  let cookie;
+  if (headers && headers["set-cookie"]) {
+    cookie = headers["set-cookie"][0].split(";")[0];
+  }
 
-let _jar = null; 
-async function getCookieJar() {
-    if (_jar) return _jar;
-
-    // if not jar then we need to create one and login to have session cookies
-    _jar = rp.jar();
-
-    const body = {
-        url: `${config.seedbox.url}/api/v2/auth/login`,
-        jar: _jar,
-        form: {
-            username: config.seedbox.username,
-            password: config.seedbox.password
-        }
-    };
-
-    await postData(body);
-
-    return _jar;
+  return cookie;
 }
 
 /**
  * upload torrent
  */
-module.exports.uploadTorrent = async (torrent, torrentClient) => {
+module.exports.uploadTorrent = async (torrent) => {
+  // allow for other torrent clients here
+  if (/^deluge$/i.test(config.seedbox.client)) {
+  } else {
+    await uploadQbittorrent(torrent);
+  }
+};
 
-    // allow for other torrent clients here
-    if (torrentClient) {
+/**
+ * get a torrent's files list from the torrent's hash
+ */
+const getTorrentFiles = async (hash) => {
+  const uri = `${config.seedbox.url}/api/v2/torrents/files?hash=${hash}`;
+  return await getData({
+    uri,
+    jar: await getQbittorrentCookieJar(),
+  });
+};
 
-    } else {
-        await uploadQbittorrent(torrent);
-    }
+/**
+ * delete torrents given a list of hashes
+ */
+const deleteTorrent = async (hashes) => {
+  const parameters = querystring.stringify({ deleteFiles: false, hashes });
+  const uri = `${config.seedbox.url}/api/v2/torrents/delete?${parameters}`;
+
+  return await getData({
+    uri,
+    jar: await getQbittorrentCookieJar(),
+  });
+};
+
+module.exports.deleteUncategorizedRarTorrents = async function () {
+  const uri = `${config.seedbox.url}/api/v2/sync/maindata`;
+
+  const response = await getData({
+    uri,
+    jar: await getQbittorrentCookieJar(),
+  });
+
+  const torrents = Object.entries(response.torrents)
+    .reduce((acc, [hash, torrent]) => {
+      acc.push({ ...torrent, hash });
+      return acc;
+    }, [])
+    .filter((torrent) => !torrent.category);
+
+  for await (const torrent of torrents) {
+    const files = await getTorrentFiles(torrent.hash);
+    if (files.length > config.global.removeAboveNumberOfFiles)
+      await deleteTorrent(torrent.hash);
+  }
+
+  await logger(`deleted rar files`);
+};
+
+let _jar = null;
+async function getQbittorrentCookieJar() {
+  if (_jar) return _jar;
+
+  // if not jar then we need to create one and login to have session cookies
+  _jar = rp.jar();
+
+  const body = {
+    url: `${config.seedbox.url}/api/v2/auth/login`,
+    jar: _jar,
+    form: {
+      username: config.seedbox.username,
+      password: config.seedbox.password,
+    },
+  };
+
+  await postData(body);
+
+  return _jar;
 }
 
 /**
  * upload torent to a qbittorrent client
- * @param {Object} torrent 
+ * @param {Object} torrent
  */
-const uploadQbittorrent = async torrent => {
-    const formData = {
-        paused: 'true',
-        autoTMM: 'false',
-        root_folder: 'false',
-        urls: torrent.downloadUrl,
-        savepath: torrent.folderName,
-    };
+async function uploadQbittorrent(torrent) {
+  const formData = {
+    paused: "true",
+    autoTMM: "false",
+    root_folder: "false",
+    urls: torrent.downloadUrl,
+    savepath: torrent.folderName,
+    skip_checking: config.global.skipHashChecking ? "true" : "false",
+  };
 
-    const response = await postData({
-        url: `${config.seedbox.url}/api/v2/torrents/add`,
-        jar: await getCookieJar(),
-        headers: { 'Content-Type': 'multipart/form-data' },
-        formData
-    });
+  const response = await postData({
+    url: `${config.seedbox.url}/api/v2/torrents/add`,
+    jar: await getQbittorrentCookieJar(),
+    headers: { "Content-Type": "multipart/form-data" },
+    formData,
+  });
 
-    if (!/ok/i.test(response)) throw new Error(response);
+  if (!/ok/i.test(response)) await uploadError(response, torrent);
+}
+
+/**
+ *
+ */
+async function uploadError(response, torrent) {
+  await logger(`Error uploading torrent ${response}: ${torrent.downloadUrl}`);
+}
+
+async function getDelugeCookie() {
+  if (_jar) return _jar;
+
+  const body = {
+    url: `${config.seedbox.url}`,
+    form: {
+      method: "auth.login",
+      params: [config.seedbox.password],
+    },
+  };
+
+  const response = await postData(body);
+  _jar = getCookie(response.headers);
+
+  return _jar;
+}
+
+/**
+ * upload torent to a Deluge client
+ * @param {Object} torrent
+ */
+async function uploadDeluge(torrent) {
+  const formData = {
+    method: "web.add_torrents",
+    params: [
+      [
+        {
+          path: torrent.downloadUrl,
+          options: {
+            file_priorities: [],
+            compact_allocation: true,
+            add_paused: true,
+            max_connections: -1,
+            max_download_speed: -1,
+            max_upload_slots: -1,
+            max_upload_speed: -1,
+            prioritize_first_last_pieces: false,
+            download_location: torrent.folderName,
+          },
+        },
+      ],
+    ],
+  };
+
+  const SESSION_COOKIE = await getDelugeCookie();
+
+  const response = await postData({
+    url: `${config.seedbox.url}`,
+    headers: { "Content-Type": "multipart/form-data", Cookie: SESSION_COOKIE },
+    formData,
+  });
+
+  if (!/ok/i.test(response)) throw new Error(response);
 }
