@@ -4,7 +4,6 @@ const {
   checkMatchingMovie,
   logger,
   formatRecord,
-  convertIndexerToFileName,
   getFilteredIndexers,
   delay,
 } = require("./tools");
