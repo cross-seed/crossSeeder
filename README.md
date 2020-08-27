@@ -1,6 +1,6 @@
 ## Cross Seeder
 
-This program will use Radarr to find movies currently downloaded and search through each of your indexers setup in Radarr for similar matching torrents. 
+This program will use Radarr/Sonarr to find movies currently downloaded and search through each of your indexers setup in Radarr for similar matching torrents. 
 It does this by looking at the torrent sizes and adding torrents close to your downloaded torrent size. 
 Afterwards, you can review the torrent added to rename, delete, or start torrent found.
 By default crossSeeder will find cross seeds for all indexers in Radarr. You can tell crossSeeder to only cross seed indexers from a white list via `whiteListIndexers` or skip indexers from a black list via `blackListIndexers`.
@@ -14,7 +14,8 @@ By default crossSeeder will find cross seeds for all indexers in Radarr. You can
 * add your qBittorrent username, password, and url
   
 ## Usage
-* Run `npm start` to start cross seeder
+* Run `npm start` or `npm run radarr` to start cross seeder for Radarr
+* Run `npm run sonarr` to start cross seeder for Sonarr
 
 ## Advanced Usage
 

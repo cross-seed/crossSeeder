@@ -74,7 +74,7 @@ const getMatchingSeasons = async () => {
       }
 
       // after processing all record save series season to db
-      await writeToTable(_season, "sonarr_sync");
+      await writeToTable(_season, "sonarr");
     }
   }
 };
