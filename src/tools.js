@@ -1,13 +1,9 @@
 const config = require("../config");
 
 /** do NOT change the default timeout - this is so the torrent APIs do not get hammered - change at your own risk */
-const delay = async (timeout = 1) =>
+const delay = async (timeout = 5000) =>
   new Promise((resolve) => setTimeout(resolve, timeout));
 module.exports.delay = delay;
-
-module.exports.convertIndexerToFileName = (indexer) =>
-  toLowerCase(indexer.name);
-const toLowerCase = (name) => (name || "").toLowerCase();
 
 /**
  * get only the data we need to compare movie records (radarr) with movie results (jackett)

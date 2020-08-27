@@ -13,6 +13,8 @@ const { uploadTorrent, deleteUncategorizedRarTorrents } = require("./seedbox");
 const { getMovieList, getAllIndexers, getMovieResults } = require("./radarr");
 const config = require("../config");
 
+const FILE_NAME = "radarr";
+
 const syncMovies = async () => {
   const indexerList = await getAllIndexers();
 
@@ -37,14 +39,10 @@ const syncMovies = async () => {
   );
   await logger(`-----------`);
 
-  // if torrent was already saved then skip
-  // const processedTorrent = await readFromTable(record, fileName);
-  if (processedTorrent) continue;
-
   let numberOfMatches = 0;
   for await (const record of records) {
     // if torrent was already saved then skip
-    const processedTorrent = await readFromTable(record, "radarr");
+    const processedTorrent = await readFromTable(record, FILE_NAME);
     if (processedTorrent) continue;
 
     const searchResults = await getMovieResults({
@@ -72,8 +70,8 @@ const syncMovies = async () => {
     }
 
     // save that we have processed the movie record for a torrent site
-    await writeToTable(record, data.fileName);
-    await logger(`-^- ${numberOfMatches} matches found for ${data.fileName}`);
+    await writeToTable(record, FILE_NAME);
+    await logger(`-^- ${numberOfMatches} matches found for ${record.title}`);
 
     delay();
   }
@@ -82,59 +80,32 @@ const syncMovies = async () => {
     await deleteUncategorizedRarTorrents();
 };
 
-/**
- * from a list of movies from radarr get the matching torrents
- * (by release group) from private torrent sites
- */
-async function getMovieTorrents(fileName, records) {}
-
-/**
- * delete a movie from all indexer storage tables
- */
 async function deleteMovieById() {
-  const indexerList = await getAllIndexers();
-
-  // filter by black/white lists in config
-  const filteredIndexers = getFilteredIndexers(indexerList);
   const [, , , ...movieIds] = process.argv;
   await logger(`deleting ${movieIds.join("\n")}`);
   await logger(`----------------`);
 
-  for await (const indexer of filteredIndexers) {
-    const fileName = convertIndexerToFileName(indexer);
+  for (const movieId of movieIds) {
+    const isSlug = isNaN(parseInt(movieId));
 
-    for (const movieId of movieIds) {
-      const isSlug = isNaN(parseInt(movieId));
-
-      if (isSlug) {
-        const result = deleteFromTable({ titleSlug: movieId }, fileName);
-        if (result)
-          await logger(
-            `deleted movie with titleSlug ${movieId} (${result.title}) from ${fileName}`
-          );
-        else
-          await logger(
-            `could not delete movie with titleSlug ${movieId} from ${fileName}`
-          );
-      } else {
-        const result = deleteFromTable({ id: parseInt(movieId) }, fileName);
-        if (result)
-          await logger(
-            `deleted movie with id ${movieId} (${result.title}) from ${fileName}`
-          );
-        else
-          await logger(
-            `could not delete movie with id ${movieId} from ${fileName}`
-          );
-      }
+    if (isSlug) {
+      const result = deleteFromTable({ titleSlug: movieId }, FILE_NAME);
+      if (result)
+        await logger(
+          `deleted movie with titleSlug ${movieId} (${result.title})`
+        );
+      else await logger(`could not delete movie with titleSlug ${movieId}`);
+    } else {
+      const result = deleteFromTable({ id: parseInt(movieId) }, FILE_NAME);
+      if (result)
+        await logger(`deleted movie with id ${movieId} (${result.title})`);
+      else await logger(`could not delete movie with id ${movieId}`);
     }
   }
 }
 
 (async () => {
   const myArgs = process.argv;
-  const saveIndexers = myArgs.includes("saveIndexers");
-  const restoreIndexers = myArgs.includes("restoreIndexers");
   const deleteMovie = myArgs.includes("deleteMovie");
   const deleteRars = myArgs.includes("deleteRars");
 

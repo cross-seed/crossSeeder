@@ -1,17 +1,16 @@
 {
   "name": "cross-seeder",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "scripts": {
     "start": "node src/index.js",
-    "save": "node src/index.js saveIndexers",
-    "restore": "node src/index.js restoreIndexers",
+    "sonarr": "node src/sonarr.js",
+    "radarr": "node src/index.js",
     "delete": "node src/index.js deleteMovie",
-    "pruge": "node src/index.js deleteMovie",
     "remove": "node src/index.js deleteMovie",
+    "purge": "node src/index.js deleteMovie",
     "deleteRars": "node src/index.js deleteRars",
     "removeRars": "node src/index.js deleteRars",
-    "purgeRars": "node src/index.js deleteRars",
-    "sonarr": "node src/sonarr.js"
+    "purgeRars": "node src/index.js deleteRars"
   },
   "dependencies": {
     "lowdb": "^1.0.0",
