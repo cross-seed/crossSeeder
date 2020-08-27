@@ -31,7 +31,7 @@ const syncMovies = async () => {
   const filteredIndexers = getFilteredIndexers(indexerList);
 
   const indexerNames = filteredIndexers
-    .map((indexer) => indexer.name)
+    .map((indexer) => indexer.name.toLowerCase())
     .join(`\n`);
   await logger(
     `${filteredIndexers.length} matching indexers found:\n${indexerNames}`
@@ -52,9 +52,9 @@ const syncMovies = async () => {
     for await (const result of searchResults) {
       // see if the result matches an index we want
       const wantedIndexer = indexerNames.find(
-        (indexerName) => result.indexer === indexerName
+        (indexerName) => result.indexer.toLowerCase() === indexerName
       );
-      if (wantedIndexer) continue;
+      if (!wantedIndexer) continue;
 
       // see if the result matches the settings we want
       const matchingTorrent = checkMatchingMovie(result, record);
