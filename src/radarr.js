@@ -61,9 +61,6 @@ async function getMovieResults({ movieId, title }) {
   });
 
   const searchUrl = `${_getRadarrApiPath()}/release?${parameters}`;
-  let searchResults = await getData({ uri: searchUrl });
-  await logger(`${searchResults.length} results found`);
-
-  return searchResults;
+  return await getData({ uri: searchUrl });
 }
 module.exports.getMovieResults = getMovieResults;

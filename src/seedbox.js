@@ -76,8 +76,6 @@ module.exports.deleteUncategorizedRarTorrents = async function () {
 let _jar = null;
 async function getQbittorrentCookieJar() {
   if (_jar) return _jar;
-
-  // if not jar then we need to create one and login to have session cookies
   _jar = rp.jar();
 
   const body = {
@@ -125,20 +123,25 @@ async function uploadError(response, torrent) {
   await logger(`Error uploading torrent ${response}: ${torrent.downloadUrl}`);
 }
 
-async function getDelugeCookie() {
+async function getDelugeCookieJar() {
   if (_jar) return _jar;
+  _jar = rp.jar();
 
-  const body = {
-    url: `${config.seedbox.url}`,
-    form: {
-      method: "auth.login",
-      params: [config.seedbox.password],
-    },
+  const form = {
+    id: 1,
+    method: "auth.login",
+    params: [config.seedbox.password],
   };
 
-  const response = await postData(body);
-  _jar = getCookie(response.headers);
-
+  await postData({
+    url: `${config.seedbox.url}/json`,
+    jar: _jar,
+    form,
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+  });
   return _jar;
 }
 
@@ -147,35 +150,16 @@ async function getDelugeCookie() {
  * @param {Object} torrent
  */
 async function uploadDeluge(torrent) {
-  const formData = {
-    method: "web.add_torrents",
-    params: [
-      [
-        {
-          path: torrent.downloadUrl,
-          options: {
-            file_priorities: [],
-            compact_allocation: true,
-            add_paused: true,
-            max_connections: -1,
-            max_download_speed: -1,
-            max_upload_slots: -1,
-            max_upload_speed: -1,
-            prioritize_first_last_pieces: false,
-            download_location: torrent.folderName,
-          },
-        },
-      ],
-    ],
+  const form = {
+    metainfo: torrent.downloadUrl,
+    method: "webapi.add_torrent",
+    params: { download_location: torrent.folderName },
   };
 
-  const SESSION_COOKIE = await getDelugeCookie();
-
   const response = await postData({
-    url: `${config.seedbox.url}`,
-    headers: { "Content-Type": "multipart/form-data", Cookie: SESSION_COOKIE },
-    formData,
+    url: `${config.seedbox.url}/json`,
+    jar: await getQbittorrentCookieJar(),
+    headers: { "Content-Type": "multipart/form-data" },
+    form,
   });
-
-  if (!/ok/i.test(response)) throw new Error(response);
 }

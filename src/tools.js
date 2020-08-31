@@ -5,6 +5,11 @@ const delay = async (timeout = 5000) =>
   new Promise((resolve) => setTimeout(resolve, timeout));
 module.exports.delay = delay;
 
+const toLowerCase = (string) => {
+  if (!string) return "";
+  return string.toLowerCase();
+};
+
 /**
  * get only the data we need to compare movie records (radarr) with movie results (jackett)
  * @param {Object} record movie record from radarr

@@ -30,11 +30,14 @@ const syncMovies = async () => {
   // filter by black/white lists in config
   const filteredIndexers = getFilteredIndexers(indexerList);
 
-  const indexerNames = filteredIndexers
-    .map((indexer) => indexer.name.toLowerCase())
-    .join(`\n`);
+  const indexerNames = filteredIndexers.map((indexer) =>
+    indexer.name.toLowerCase()
+  );
+
   await logger(
-    `${filteredIndexers.length} matching indexers found:\n${indexerNames}`
+    `${filteredIndexers.length} matching indexers found:\n${indexerNames.join(
+      `\n`
+    )}`
   );
   await logger(`-----------`);
 
@@ -49,6 +52,7 @@ const syncMovies = async () => {
       title: record.title,
     });
 
+    await logger(`${searchResults.length} results found`);
     for await (const result of searchResults) {
       // see if the result matches an index we want
       const wantedIndexer = indexerNames.find(
