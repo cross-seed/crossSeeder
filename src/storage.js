@@ -93,10 +93,10 @@ module.exports.readFromTable = readFromTable;
  * delete an entire record
  */
 const deleteFromTable = (data, fileName, table) => {
-  const dbRecord = _readRawFromTable({ id: data.id }, fileName, table);
+  const dbRecord = _readRawFromTable(data, fileName, table);
   if (!dbRecord.value()) return;
 
-  _getTable(fileName, table).remove({ id: data.id }).write();
+  _getTable(fileName, table).remove(data).write();
   return dbRecord.value();
 };
 module.exports.deleteFromTable = deleteFromTable;
