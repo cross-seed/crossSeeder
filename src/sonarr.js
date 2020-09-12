@@ -30,7 +30,7 @@ const getMatchingSeasons = async () => {
       };
 
       // skip if processed already
-      const processedTorrent = await readFromTable(_season, "sonarr_sync");
+      const processedTorrent = await readFromTable(_season, "sonarr");
       if (processedTorrent) continue;
 
       // search for records on jackett
