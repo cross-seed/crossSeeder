@@ -1,4 +1,9 @@
-const { logger, convertToGB, equalFloats } = require("./tools");
+const {
+  logger,
+  convertToGB,
+  equalFloats,
+  getFilteredIndexers,
+} = require("./tools");
 const { getData } = require("./fetch");
 const { readFromTable, writeToTable } = require("./storage");
 const config = require("../config");
@@ -6,7 +11,30 @@ const { uploadTorrent } = require("./seedbox");
 
 const _getSonarrApiPath = () => `${config.sonarr.url}/api/v3`;
 
+async function getAllIndexers() {
+  const indexerList = await getData({
+    uri: `${_getSonarrApiPath()}/indexer?apiKey=${config.sonarr.apiKey}`,
+  });
+  return indexerList;
+}
+
 const getMatchingSeasons = async () => {
+  const indexerList = await getAllIndexers();
+
+  // filter by black/white lists in config
+  const filteredIndexers = getFilteredIndexers(indexerList);
+
+  const indexerNames = filteredIndexers.map((indexer) =>
+    indexer.name.toLowerCase()
+  );
+
+  await logger(
+    `${filteredIndexers.length} matching indexers found:\n${indexerNames.join(
+      `\n`
+    )}`
+  );
+  await logger(`-----------`);
+
   const seriesList = await getData({
     uri: `${_getSonarrApiPath()}/series?apiKey=${config.sonarr.apiKey}`,
   });
@@ -52,6 +80,12 @@ const getMatchingSeasons = async () => {
 
       // for each record find a match
       for await (const record of fullSeasonRecords) {
+        // see if the result matches an index we want
+        const wantedIndexer = indexerNames.find(
+          (indexerName) => result.indexer.toLowerCase() === indexerName
+        );
+        if (!wantedIndexer) continue;
+
         const recordSizeOnDiskGB = convertToGB(record.size);
 
         const closeSize = equalFloats(
