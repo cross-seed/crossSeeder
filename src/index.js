@@ -1,5 +1,3 @@
-const rimraf = require("rimraf");
-
 const {
   checkMatchingMovie,
   logger,
@@ -7,12 +5,18 @@ const {
   getFilteredIndexers,
   delay,
 } = require("./tools");
+
 const { readFromTable, writeToTable, deleteFromTable } = require("./storage");
 const { uploadTorrent, deleteUncategorizedRarTorrents } = require("./seedbox");
-const { getMovieList, getAllIndexers, getMovieResults } = require("./radarr");
+const {
+  getMovieList,
+  getAllIndexers,
+  getMovieResults,
+  setIndexer,
+} = require("./radarr");
 const config = require("../config");
 
-const FILE_NAME = "radarr";
+const FILE_NAME = config.radarr.storeFileName;
 
 const syncMovies = async () => {
   const indexerList = await getAllIndexers();
@@ -20,11 +24,26 @@ const syncMovies = async () => {
   // get all movies that are downloaded
   // format records and only get data we need - records are too big other wise for storage
   const movieList = await getMovieList();
-  const records = movieList.records
-    .filter((record) => record.downloaded && record.movieFile)
+
+  const records = movieList
+    .filter((record) => {
+      if (!record.movieFile) return false;
+
+      // if we have quality filter then filter out content that doesnt match quality
+      if (config.global.quality && config.global.quality.length > 0) {
+        const recordQuality = (
+          record.movieFile.quality.quality.name || ""
+        ).toLowerCase();
+        const matchedQuality = recordQuality.includes(config.global.quality);
+        if (!matchedQuality) return false;
+      }
+
+      return true;
+    })
     .map(formatRecord);
+
   await logger(
-    `${movieList.records.length} movies found and ${records.length} movies ready to process`
+    `${movieList.length} movies found and ${records.length} movies ready to process`
   );
 
   // filter by black/white lists in config
@@ -111,6 +130,15 @@ async function deleteMovieById() {
   const myArgs = process.argv;
   const deleteMovie = myArgs.includes("deleteMovie");
   const deleteRars = myArgs.includes("deleteRars");
+  const setIndexers = myArgs.includes("setIndexers");
+
+  if (setIndexers) {
+    const indexerList = await getAllIndexers();
+    for await (let index of indexerList) {
+      index.fields[0].value = index.fields[0].value.replace("xxx", "xxx");
+      await setIndexer(index);
+    }
+  }
 
   if (deleteMovie) {
     await deleteMovieById();

@@ -38,18 +38,6 @@ function _getTable(fileName, table = dbTable) {
 const createTimeStamp = () => moment(new Date()).format(timestampFormat);
 
 /**
- * allw to write multiple records to db
- */
-const writeAllToTable = (data, fileName, table) => {
-  const tableRecord = _getTable(fileName, table);
-  const writeTime = createTimeStamp();
-
-  if (Array.isArray(data)) return tableRecord.push(...data, writeTime).write();
-  return tableRecord.push({ ...data, writeTime }).write();
-};
-module.exports.writeAllToTable = writeAllToTable;
-
-/**
  * write a single record to the db
  */
 const writeToTable = (record, fileName, table) => {

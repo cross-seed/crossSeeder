@@ -4,16 +4,27 @@ const {
   equalFloats,
   getFilteredIndexers,
 } = require("./tools");
-const { getData } = require("./fetch");
+const { getData, putData } = require("./fetch");
 const { readFromTable, writeToTable } = require("./storage");
 const config = require("../config");
 const { uploadTorrent } = require("./seedbox");
 
 const _getSonarrApiPath = () => `${config.sonarr.url}/api/v3`;
+const FILE_NAME = config.sonarr.storeFileName;
 
 async function getAllIndexers() {
   const indexerList = await getData({
     uri: `${_getSonarrApiPath()}/indexer?apiKey=${config.sonarr.apiKey}`,
+  });
+  return indexerList;
+}
+
+async function setIndexer(indexer) {
+  const indexerList = await putData({
+    uri: `${_getSonarrApiPath()}/indexer/${indexer.id}?apiKey=${
+      config.sonarr.apiKey
+    }`,
+    body: indexer,
   });
   return indexerList;
 }
@@ -58,7 +69,7 @@ const getMatchingSeasons = async () => {
       };
 
       // skip if processed already
-      const processedTorrent = await readFromTable(_season, "sonarr");
+      const processedTorrent = await readFromTable(_season, FILE_NAME);
       if (processedTorrent) continue;
 
       // search for records on jackett
@@ -82,7 +93,7 @@ const getMatchingSeasons = async () => {
       for await (const record of fullSeasonRecords) {
         // see if the result matches an index we want
         const wantedIndexer = indexerNames.find(
-          (indexerName) => result.indexer.toLowerCase() === indexerName
+          (indexerName) => record.indexer.toLowerCase() === indexerName
         );
         if (!wantedIndexer) continue;
 
@@ -108,7 +119,7 @@ const getMatchingSeasons = async () => {
       }
 
       // after processing all record save series season to db
-      await writeToTable(_season, "sonarr");
+      await writeToTable(_season, FILE_NAME);
     }
   }
 };

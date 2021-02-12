@@ -1,14 +1,14 @@
 const querystring = require("querystring");
 
 const { logger } = require("./tools");
-const { getData } = require("./fetch");
+const { getData, putData } = require("./fetch");
 const config = require("../config");
 
 /**
  * get base radarr path - v2 or v3?
  */
 const _getRadarrApiPath = () => {
-  return `${config.radarr.url}/api`;
+  return `${config.radarr.url}/api/v3`;
 };
 
 /**
@@ -48,6 +48,16 @@ async function getAllIndexers() {
   return indexerList;
 }
 module.exports.getAllIndexers = getAllIndexers;
+
+/**
+ * save an indexer settings
+ */
+async function setIndexer(indexer) {
+  const url = getIndexerUrl(indexer.id);
+  const indexerList = await putData({ uri: url, body: indexer });
+  return indexerList;
+}
+module.exports.setIndexer = setIndexer;
 
 /**
  * get list of torrents from radarr

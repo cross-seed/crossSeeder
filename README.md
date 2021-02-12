@@ -1,6 +1,6 @@
-## Cross Seeder
+# Cross Seeder
 
-This program will use Radarr/Sonarr to find movies currently downloaded and search through each of your indexers setup in Radarr for similar matching torrents. 
+This program will use Radarr/Sonarr (v3 only) to find movies currently downloaded and search through each of your indexers setup in Radarr for similar matching torrents. 
 It does this by looking at the torrent sizes and adding torrents close to your downloaded torrent size. 
 Afterwards, you can review the torrent added to rename, delete, or start torrent found.
 By default crossSeeder will find cross seeds for all indexers in Radarr. You can tell crossSeeder to only cross seed indexers from a white list via `whiteListIndexers` or skip indexers from a black list via `blackListIndexers`.
@@ -14,6 +14,7 @@ By default crossSeeder will find cross seeds for all indexers in Radarr. You can
 * add your qBittorrent username, password, and url
   
 ## Usage
+
 * Run `npm start` or `npm run radarr` to start cross seeder for Radarr
 * Run `npm run sonarr` to start cross seeder for Sonarr
 
@@ -25,7 +26,10 @@ Next, `sizeThreshold` is the largest difference in GB that a torrent will be a '
 
 When finding a cross seed match, the release group is not used because it is not 100% reliable. I personally rather find as many matches as possible and delete the ones that aren't a match. You can enable to ALSO match by release group with `matchByReleaseGroup` set to `true`.
 
+You can add a `quality` filter that will only sync content that matches all qualies you included. This is case insensitive and can partial match so if you set `quality: ["remux"]` then `Remux-1080p` and `Remux-4k` will both match.
+
 ## Development
+
 Due to professional software and a growing number of open source obligations, I won't have time to maintain this project. This was just asomething I wanted to share to others that might find it just as useful as I do. That being said, I will accept pull requests for new features and may find time for small bug fixes. For reference, the features I'd like to see at the moment are:
 
 * rtorrent and deluge integration
